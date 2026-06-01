@@ -1,27 +1,23 @@
 /**
  * components/admin/GradeCard.jsx
- * Tarjeta de grado con QR único para el panel de administración.
- * Soporta: ampliar QR, copiar URL, descargar PNG, editar info, eliminar.
+ * Tarjeta de grado con QR — soporte tema pastel claro/oscuro.
  */
 
 import React, { useState, useRef } from "react";
 import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
-import {
-  IconQR, IconCopy, IconClipboardCheck,
-  IconDownload, IconEdit, IconTrash,
-} from "../common/Icons.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import { getTheme, getSectionColor } from "../../theme.js";
+import { IconQR, IconCopy, IconClipboardCheck, IconDownload, IconEdit, IconTrash } from "../common/Icons.jsx";
 
-const APP_DOMAIN =
-  import.meta.env.VITE_APP_DOMAIN || "https://asistencia-coed.netlify.app";
+const APP_DOMAIN = import.meta.env.VITE_APP_DOMAIN || "https://asistencia-coed.netlify.app";
 
-const COLORS = [
-  "#6d28d9", "#4f46e5", "#7c3aed",
-  "#5b21b6", "#4338ca", "#6366f1",
-  "#0891b2", "#059669", "#dc2626",
-];
+const COLORS = ["#6d28d9","#4f46e5","#7c3aed","#5b21b6","#4338ca","#6366f1","#0891b2","#059669","#dc2626"];
 
 export default function GradeCard({ grade, onEdit, onDelete }) {
   const { id, label, section, color } = grade;
+  const { isDark } = useTheme();
+  const t = getTheme(isDark);
+  const sc = getSectionColor(id, isDark);
   const qrUrl = `${APP_DOMAIN}/marcar?sala=${id}`;
 
   const [expanded, setExpanded] = useState(false);
@@ -30,213 +26,154 @@ export default function GradeCard({ grade, onEdit, onDelete }) {
   const [form, setForm] = useState({ id, label, section, color });
   const canvasRef = useRef(null);
 
-  // ── Copiar URL ──────────────────────────────────────────────────────────
   const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(qrUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* fallback silencioso */ }
+    try { await navigator.clipboard.writeText(qrUrl); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { /* silent */ }
   };
 
-  // ── Descargar QR como PNG ───────────────────────────────────────────────
   const handleDownload = () => {
     const canvas = canvasRef.current?.querySelector("canvas");
     if (!canvas) return;
-    const url = canvas.toDataURL("image/png");
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `QR_${id}_${label.replace(/\s/g, "_")}_${section.replace(/\s/g, "_")}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    a.href = canvas.toDataURL("image/png");
+    a.download = `QR_${id}_${label.replace(/\s/g,"_")}.png`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
   };
 
-  // ── Guardar edición ─────────────────────────────────────────────────────
   const handleSave = () => {
     if (!form.id.trim() || !form.label.trim() || !form.section.trim()) return;
     onEdit(id, { ...form, id: form.id.trim().toUpperCase() });
     setEditing(false);
   };
 
-  // ── Eliminar ────────────────────────────────────────────────────────────
   const handleDelete = () => {
-    if (window.confirm(`¿Eliminar la sección "${label} — ${section}"?`)) {
-      onDelete(id);
-    }
+    if (window.confirm(`¿Eliminar la sección "${label} — ${section}"?`)) onDelete(id);
+  };
+
+  const inputStyle = {
+    borderRadius: "10px", padding: "8px 12px", fontSize: "13px",
+    outline: "none", width: "100%", color: t.text,
+    background: t.input, border: `1px solid ${t.inputBorder}`,
   };
 
   return (
-    <div
-      className="rounded-2xl overflow-hidden transition-all duration-300 hover:translate-y-[-2px]"
-      style={{
-        background: "linear-gradient(145deg, #1a1035 0%, #110d2a 100%)",
-        border: `1px solid ${color}33`,
-        boxShadow: expanded ? `0 0 40px ${color}22` : "0 4px 24px rgba(0,0,0,0.3)",
-      }}
-    >
-      {/* Canvas oculto para descarga PNG */}
+    <div style={{
+      borderRadius: "20px", overflow: "hidden",
+      background: isDark ? "linear-gradient(145deg, #1a1035, #110d2a)" : t.card,
+      border: `1.5px solid ${sc.border}`,
+      boxShadow: expanded
+        ? `0 0 32px ${sc.accent}22`
+        : isDark ? "0 4px 20px rgba(0,0,0,0.3)" : `0 4px 20px ${sc.accent}12`,
+      transition: "all 0.2s",
+    }}>
+      {/* Canvas oculto para descarga */}
       <div ref={canvasRef} style={{ display: "none" }}>
         <QRCodeCanvas value={qrUrl} size={512} level="H" fgColor="#1a0a3e" bgColor="#ffffff" />
       </div>
 
-      {/* ── Cabecera ── */}
-      <div
-        className="px-5 py-4 flex items-center justify-between"
-        style={{ background: `${color}15`, borderBottom: `1px solid ${color}22` }}
-      >
+      {/* Cabecera */}
+      <div style={{
+        padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between",
+        background: sc.bg, borderBottom: `1px solid ${sc.border}`,
+      }}>
         <div>
-          <p className="text-white font-bold text-base leading-tight">{label}</p>
-          <p className="text-purple-300 text-xs mt-0.5">{section}</p>
+          <p style={{ fontWeight: 800, fontSize: "15px", color: sc.text, margin: 0, lineHeight: 1.3 }}>{label}</p>
+          <p style={{ fontSize: "12px", color: sc.text, opacity: 0.7, margin: "2px 0 0" }}>{section}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            className="text-xs font-bold px-3 py-1 rounded-full font-mono"
-            style={{ background: `${color}25`, color: "#c4b5fd", border: `1px solid ${color}45` }}
-          >
-            ID: {id}
-          </div>
-          {/* Editar */}
-          <button
-            onClick={() => { setForm({ id, label, section, color }); setEditing(true); }}
-            className="p-1.5 rounded-lg text-purple-400 hover:text-white transition-colors"
-            style={{ background: `${color}20` }}
-            title="Editar sección"
-          >
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{
+            fontSize: "11px", fontWeight: 700, padding: "4px 10px", borderRadius: "999px",
+            background: sc.pill, color: sc.pillText,
+          }}>ID: {id}</span>
+          <button onClick={() => { setForm({ id, label, section, color }); setEditing(true); }}
+            style={{ padding: "6px", borderRadius: "8px", border: "none", cursor: "pointer", color: sc.accent, background: `${sc.accent}18` }}
+            title="Editar">
             <IconEdit className="w-3.5 h-3.5" />
           </button>
-          {/* Eliminar */}
-          <button
-            onClick={handleDelete}
-            className="p-1.5 rounded-lg text-red-400 hover:text-red-300 transition-colors"
-            style={{ background: "rgba(220,38,38,0.12)" }}
-            title="Eliminar sección"
-          >
+          <button onClick={handleDelete}
+            style={{ padding: "6px", borderRadius: "8px", border: "none", cursor: "pointer", color: isDark ? "#f87171" : "#dc2626", background: "rgba(220,38,38,0.1)" }}
+            title="Eliminar">
             <IconTrash className="w-3.5 h-3.5" />
           </button>
         </div>
       </div>
 
-      {/* ── Modal de edición ── */}
+      {/* Edición inline */}
       {editing && (
-        <div className="px-5 py-4 border-b" style={{ borderColor: `${color}22`, background: `${color}08` }}>
-          <p className="text-purple-300 text-xs font-semibold mb-3">Editar sección</p>
-          <div className="flex flex-col gap-2">
-            <input
-              value={form.id}
-              onChange={(e) => setForm((p) => ({ ...p, id: e.target.value }))}
-              placeholder="ID (ej: 4A)"
-              maxLength={4}
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(139,92,246,0.3)" }}
-            />
-            <input
-              value={form.label}
-              onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))}
-              placeholder="Año (ej: 4to Año)"
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(139,92,246,0.3)" }}
-            />
-            <input
-              value={form.section}
-              onChange={(e) => setForm((p) => ({ ...p, section: e.target.value }))}
-              placeholder="Sección (ej: Sección C)"
-              className="rounded-lg px-3 py-2 text-sm text-white outline-none"
-              style={{ background: "rgba(255,255,255,0.07)", border: "1px solid rgba(139,92,246,0.3)" }}
-            />
-            {/* Selector de color */}
-            <div className="flex gap-2 flex-wrap mt-1">
+        <div style={{ padding: "16px 20px", borderBottom: `1px solid ${sc.border}`, background: sc.bg }}>
+          <p style={{ fontSize: "12px", fontWeight: 700, color: sc.text, margin: "0 0 10px" }}>Editar sección</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <input value={form.id} onChange={(e) => setForm((p) => ({ ...p, id: e.target.value }))} placeholder="ID (ej: 4A)" maxLength={4} style={inputStyle} />
+            <input value={form.label} onChange={(e) => setForm((p) => ({ ...p, label: e.target.value }))} placeholder="Año" style={inputStyle} />
+            <input value={form.section} onChange={(e) => setForm((p) => ({ ...p, section: e.target.value }))} placeholder="Sección" style={inputStyle} />
+            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginTop: "4px" }}>
               {COLORS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setForm((p) => ({ ...p, color: c }))}
-                  className="w-6 h-6 rounded-full transition-transform hover:scale-110"
-                  style={{
-                    background: c,
-                    outline: form.color === c ? `2px solid white` : "none",
-                    outlineOffset: "2px",
-                  }}
-                />
+                <button key={c} onClick={() => setForm((p) => ({ ...p, color: c }))}
+                  style={{ width: "24px", height: "24px", borderRadius: "50%", background: c, border: "none", cursor: "pointer",
+                    outline: form.color === c ? "2px solid " + t.text : "none", outlineOffset: "2px" }} />
               ))}
             </div>
-            <div className="flex gap-2 mt-1">
-              <button
-                onClick={handleSave}
-                className="flex-1 py-2 rounded-lg text-xs font-bold text-white"
-                style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)" }}
-              >
-                Guardar
-              </button>
-              <button
-                onClick={() => setEditing(false)}
-                className="flex-1 py-2 rounded-lg text-xs font-semibold text-purple-300"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(139,92,246,0.2)" }}
-              >
-                Cancelar
-              </button>
+            <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+              <button onClick={handleSave} style={{
+                flex: 1, padding: "8px", borderRadius: "10px", fontSize: "12px", fontWeight: 700,
+                color: "#fff", border: "none", cursor: "pointer",
+                background: isDark ? "linear-gradient(135deg, #7c3aed, #4f46e5)" : `linear-gradient(135deg, ${sc.accent}, ${sc.accent}cc)`,
+              }}>Guardar</button>
+              <button onClick={() => setEditing(false)} style={{
+                flex: 1, padding: "8px", borderRadius: "10px", fontSize: "12px", fontWeight: 600,
+                color: t.textMuted, border: `1px solid ${t.cardBorder}`, cursor: "pointer", background: t.card,
+              }}>Cancelar</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ── Cuerpo ── */}
-      <div className="p-5">
-        {/* QR Code */}
-        <div
-          className="rounded-xl flex items-center justify-center mb-4 transition-all duration-300"
-          style={{
-            background: "#ffffff",
-            padding: expanded ? "20px" : "16px",
-            minHeight: expanded ? 220 : 160,
-          }}
-        >
-          <QRCodeSVG
-            value={qrUrl}
-            size={expanded ? 180 : 120}
-            fgColor="#1a0a3e"
-            bgColor="#ffffff"
-            level="H"
-            includeMargin={false}
-          />
+      {/* Cuerpo */}
+      <div style={{ padding: "20px" }}>
+        {/* QR */}
+        <div style={{
+          borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center",
+          background: "#ffffff", padding: expanded ? "20px" : "16px",
+          minHeight: expanded ? 220 : 160, marginBottom: "14px",
+          border: `1px solid ${sc.border}`,
+        }}>
+          <QRCodeSVG value={qrUrl} size={expanded ? 180 : 120} fgColor="#1a0a3e" bgColor="#ffffff" level="H" />
         </div>
 
-        {/* URL del QR */}
-        <div
-          className="rounded-lg px-3 py-2 mb-4 flex items-center gap-2"
-          style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)" }}
-        >
-          <IconQR className="w-4 h-4 text-purple-400 flex-shrink-0" />
-          <p className="text-purple-300 text-xs truncate flex-1 font-mono">{qrUrl}</p>
+        {/* URL */}
+        <div style={{
+          borderRadius: "10px", padding: "8px 12px", marginBottom: "14px",
+          display: "flex", alignItems: "center", gap: "8px",
+          background: sc.bg, border: `1px solid ${sc.border}`,
+        }}>
+          <IconQR style={{ width: 14, height: 14, color: sc.accent, flexShrink: 0 }} />
+          <p style={{ fontSize: "11px", color: sc.text, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
+            {qrUrl}
+          </p>
         </div>
 
-        {/* Acciones */}
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => setExpanded((p) => !p)}
-            className="flex-1 py-2.5 rounded-xl text-xs font-semibold transition-all hover:opacity-80"
-            style={{ background: `${color}18`, color: "#c4b5fd", border: `1px solid ${color}35` }}
-          >
-            {expanded ? "Reducir" : "Ampliar QR"}
+        {/* Botones */}
+        <div style={{ display: "flex", gap: "8px" }}>
+          <button onClick={() => setExpanded((p) => !p)} style={{
+            flex: 1, padding: "10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600,
+            cursor: "pointer", border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
+          }}>{expanded ? "Reducir" : "Ampliar QR"}</button>
+
+          <button onClick={handleDownload} style={{
+            flex: 1, padding: "10px", borderRadius: "12px", fontSize: "12px", fontWeight: 600,
+            cursor: "pointer", border: `1px solid ${sc.border}`, background: sc.bg, color: sc.text,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+          }}>
+            <IconDownload style={{ width: 13, height: 13 }} /> Descargar
           </button>
 
-          <button
-            onClick={handleDownload}
-            className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all hover:opacity-80"
-            style={{ background: "rgba(109,40,217,0.2)", color: "#c4b5fd", border: "1px solid rgba(109,40,217,0.4)" }}
-          >
-            <IconDownload className="w-3.5 h-3.5" />
-            Descargar
-          </button>
-
-          <button
-            onClick={handleCopy}
-            className="flex-1 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-center gap-1.5 transition-all hover:opacity-90 active:scale-95"
-            style={{
-              background: copied ? "rgba(16,185,129,0.2)" : "linear-gradient(135deg, #6d28d9, #4f46e5)",
-              color: copied ? "#34d399" : "#fff",
-              border: copied ? "1px solid rgba(16,185,129,0.4)" : "none",
-            }}
-          >
+          <button onClick={handleCopy} style={{
+            flex: 1, padding: "10px", borderRadius: "12px", fontSize: "12px", fontWeight: 700,
+            cursor: "pointer", border: "none", color: "#fff",
+            background: copied ? (isDark ? "rgba(16,185,129,0.7)" : "#059669") : `linear-gradient(135deg, ${sc.accent}, ${sc.accent}cc)`,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: "4px",
+            boxShadow: `0 4px 12px ${sc.accent}33`,
+          }}>
             {copied ? <><IconClipboardCheck />Copiado</> : <><IconCopy />Copiar URL</>}
           </button>
         </div>

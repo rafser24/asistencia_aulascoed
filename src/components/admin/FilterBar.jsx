@@ -1,11 +1,7 @@
-/**
- * components/admin/FilterBar.jsx
- * Barra de filtros del historial de asistencias.
- * Permite filtrar por fecha y por grado/sección.
- */
-
 import React from "react";
-import { IconCalendar, IconSearch, IconDownload, IconChevronDown } from "../common/Icons.jsx";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import { getTheme } from "../../theme.js";
+import { IconCalendar, IconSearch, IconChevronDown } from "../common/Icons.jsx";
 
 const GRADES = [
   { id: "1A", label: "1er Año — Sección A" },
@@ -16,109 +12,64 @@ const GRADES = [
   { id: "3B", label: "3er Año — Sección B" },
 ];
 
-export default function FilterBar({
-  selectedDate,
-  onDateChange,
-  selectedGrade,
-  onGradeChange,
-  onSearch,
-  onExport,
-  hasRecords,
-  loading,
-}) {
+export default function FilterBar({ selectedDate, onDateChange, selectedGrade, onGradeChange, onSearch, hasRecords, loading }) {
+  const { isDark } = useTheme();
+  const t = getTheme(isDark);
+
+  const inputStyle = {
+    borderRadius: "12px", padding: "10px 16px", fontSize: "13px",
+    outline: "none", width: "100%", color: t.text,
+    background: t.input, border: `1px solid ${t.inputBorder}`,
+    colorScheme: isDark ? "dark" : "light",
+  };
+
   return (
-    <div
-      className="rounded-2xl p-5 mb-6"
-      style={{
-        background: "linear-gradient(145deg, #1a1035 0%, #110d2a 100%)",
-        border: "1px solid rgba(139,92,246,0.15)",
-      }}
-    >
-      <div className="flex flex-wrap items-end gap-4">
+    <div style={{
+      borderRadius: "20px", padding: "20px", marginBottom: "20px",
+      background: t.card, border: `1px solid ${t.cardBorder}`,
+      boxShadow: t.cardShadow,
+    }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "flex-end", gap: "16px" }}>
         {/* Fecha */}
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-          <label className="text-purple-300 text-xs font-semibold flex items-center gap-1.5">
-            <IconCalendar />
-            Fecha
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: "180px" }}>
+          <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, display: "flex", alignItems: "center", gap: "6px" }}>
+            <IconCalendar /> Fecha
           </label>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => onDateChange(e.target.value)}
-            className="rounded-xl px-4 py-2.5 text-sm text-white font-mono outline-none transition-all"
-            style={{
-              background: "rgba(255,255,255,0.06)",
-              border: "1px solid rgba(139,92,246,0.3)",
-              colorScheme: "dark",
-            }}
-            onFocus={(e) =>
-              (e.target.style.borderColor = "rgba(109,40,217,0.7)")
-            }
-            onBlur={(e) =>
-              (e.target.style.borderColor = "rgba(139,92,246,0.3)")
-            }
+          <input type="date" value={selectedDate} onChange={(e) => onDateChange(e.target.value)}
+            style={inputStyle}
+            onFocus={(e) => (e.target.style.borderColor = t.accent)}
+            onBlur={(e) => (e.target.style.borderColor = t.inputBorder)}
           />
         </div>
 
         {/* Grado */}
-        <div className="flex flex-col gap-1.5 flex-1 min-w-[180px]">
-          <label className="text-purple-300 text-xs font-semibold flex items-center gap-1.5">
-            <IconSearch />
-            Grado / Sección
+        <div style={{ display: "flex", flexDirection: "column", gap: "6px", flex: 1, minWidth: "180px" }}>
+          <label style={{ fontSize: "11px", fontWeight: 700, color: t.textMuted, display: "flex", alignItems: "center", gap: "6px" }}>
+            <IconSearch /> Grado / Sección
           </label>
-          <div className="relative">
-            <select
-              value={selectedGrade}
-              onChange={(e) => onGradeChange(e.target.value)}
-              className="w-full appearance-none rounded-xl px-4 py-2.5 text-sm text-white outline-none"
-              style={{
-                background: "rgba(255,255,255,0.06)",
-                border: "1px solid rgba(139,92,246,0.3)",
-                colorScheme: "dark",
-              }}
-            >
+          <div style={{ position: "relative" }}>
+            <select value={selectedGrade} onChange={(e) => onGradeChange(e.target.value)}
+              style={{ ...inputStyle, appearance: "none", paddingRight: "36px", cursor: "pointer" }}>
               <option value="all">Todos los grados</option>
-              {GRADES.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.label}
-                </option>
-              ))}
+              {GRADES.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
             </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-purple-400 pointer-events-none">
+            <div style={{ position: "absolute", right: "12px", top: "50%", transform: "translateY(-50%)", color: t.textMuted, pointerEvents: "none" }}>
               <IconChevronDown />
             </div>
           </div>
         </div>
 
-        {/* Botón consultar */}
-        <button
-          onClick={onSearch}
-          disabled={loading}
-          className="px-5 py-2.5 rounded-xl text-sm font-bold text-white flex items-center gap-2 transition-all hover:opacity-90 active:scale-95 disabled:opacity-50"
-          style={{ background: "linear-gradient(135deg, #6d28d9, #4f46e5)" }}
-        >
+        {/* Consultar */}
+        <button onClick={onSearch} disabled={loading} style={{
+          padding: "10px 20px", borderRadius: "12px", fontSize: "13px", fontWeight: 700,
+          color: "#fff", border: "none", cursor: loading ? "not-allowed" : "pointer",
+          opacity: loading ? 0.7 : 1,
+          background: isDark ? "linear-gradient(135deg, #7c3aed, #4f46e5)" : "linear-gradient(135deg, #a78bfa, #818cf8)",
+          boxShadow: "0 4px 12px rgba(124,58,237,0.3)",
+          display: "flex", alignItems: "center", gap: "8px",
+        }}>
           <IconSearch />
           {loading ? "Consultando…" : "Consultar"}
-        </button>
-
-        {/* Botón exportar CSV */}
-        <button
-          onClick={onExport}
-          disabled={!hasRecords}
-          className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 transition-all active:scale-95"
-          style={{
-            background: hasRecords
-              ? "rgba(16,185,129,0.15)"
-              : "rgba(255,255,255,0.04)",
-            border: hasRecords
-              ? "1px solid rgba(16,185,129,0.4)"
-              : "1px solid rgba(255,255,255,0.08)",
-            color: hasRecords ? "#34d399" : "#4a4060",
-            cursor: hasRecords ? "pointer" : "not-allowed",
-          }}
-        >
-          <IconDownload />
-          Exportar CSV
         </button>
       </div>
     </div>
