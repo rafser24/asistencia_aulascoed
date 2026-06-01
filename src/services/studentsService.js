@@ -129,6 +129,7 @@ export function parsearCSV(text) {
 
       return {
         codigo:        raw.codigo?.trim() || "",
+        idSeccion:     raw.idseccion?.trim() || "",
         nie:           raw.nie?.trim() || "",
         nombre:        raw.nombre?.trim() || "",
         email:         raw.email?.trim().toLowerCase() || "",
