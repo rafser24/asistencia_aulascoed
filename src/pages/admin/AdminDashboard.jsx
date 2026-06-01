@@ -10,6 +10,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from "react";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import { getTheme } from "../../theme.js";
 import AdminSidebar from "../../components/admin/AdminSidebar.jsx";
 import GradeCard from "../../components/admin/GradeCard.jsx";
 import FilterBar from "../../components/admin/FilterBar.jsx";
@@ -124,6 +126,8 @@ function NewGradeModal({ onAdd, onClose }) {
 }
 
 export default function AdminDashboard() {
+  const { isDark } = useTheme();
+  const t = getTheme(isDark);
   const [activeTab, setActiveTab] = useState("grados");
   const [grades, setGrades] = useState(loadGrades);
   const [showNewModal, setShowNewModal] = useState(false);
@@ -207,9 +211,10 @@ export default function AdminDashboard() {
     <div
       className="min-h-screen"
       style={{
-        background: "#05030f",
+        background: isDark ? "#0a0814" : "#f5f0ff",
         fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
-        color: "#ede9fe",
+        color: t.text,
+        transition: "background 0.3s",
       }}
     >
       {/* Sidebar fijo */}
@@ -219,12 +224,12 @@ export default function AdminDashboard() {
       <main className="ml-64 min-h-screen p-8">
         {/* ── Header de página ── */}
         <div className="mb-8 animate-fade-in">
-          <h1 className="text-3xl font-bold text-white">
+          <h1 className="text-3xl font-bold" style={{ color: t.text }}>
             {activeTab === "grados" && "Módulos por Grado"}
             {activeTab === "alumnos" && "Gestión de Alumnos"}
             {activeTab === "historial" && "Historial de Asistencias"}
           </h1>
-          <p className="text-purple-400 mt-1 text-sm">
+          <p className="mt-1 text-sm" style={{ color: t.textMuted }}>
             {activeTab === "grados" && "Genera y comparte el QR único por sección. Cada QR bloquea el marcado a su grado específico."}
             {activeTab === "alumnos" && "Registra, edita y organiza los alumnos por sección."}
             {activeTab === "historial" && "Consulta, filtra y exporta registros. La hora de cada registro proviene del servidor institucional."}
