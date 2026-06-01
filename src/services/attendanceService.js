@@ -123,18 +123,17 @@ export async function getAsistenciasPorFecha(dateStr, sala = null) {
   const start = new Date(dateStr + "T00:00:00");
   const end = new Date(dateStr + "T23:59:59");
 
-  const constraints = [
+  // Solo filtramos por fecha en Firestore (no requiere índice compuesto).
+  // El filtro por sala se aplica en cliente para evitar índices adicionales.
+  const q = query(
+    collection(db, COLLECTION),
     where("fecha_cliente", ">=", Timestamp.fromDate(start)),
     where("fecha_cliente", "<=", Timestamp.fromDate(end)),
-    orderBy("fecha_cliente", "asc"),
-  ];
+    orderBy("fecha_cliente", "asc")
+  );
 
-  if (sala) {
-    constraints.unshift(where("sala", "==", sala));
-  }
-
-  const q = query(collection(db, COLLECTION), ...constraints);
   const snap = await getDocs(q);
+  const all = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return sala ? all.filter((r) => r.sala === sala) : all;
 }
