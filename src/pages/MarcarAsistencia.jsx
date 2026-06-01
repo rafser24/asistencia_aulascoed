@@ -13,7 +13,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { auth } from "../services/firebase.js";
+import { collection, query, where, getDocs, Timestamp } from "firebase/firestore";
+import { auth, db } from "../services/firebase.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useGeofencing } from "../hooks/useGeofencing.js";
 import { useAttendance } from "../hooks/useAttendance.js";
@@ -34,18 +35,114 @@ const GRADE_LABELS = {
   "3B": "3er Año — Sección B",
 };
 
-const GRADES_LIST = [
-  { id: "1A", label: "1er Año", section: "Sección A" },
-  { id: "1B", label: "1er Año", section: "Sección B" },
-  { id: "2A", label: "2do Año", section: "Sección A" },
-  { id: "2B", label: "2do Año", section: "Sección B" },
-  { id: "3A", label: "3er Año", section: "Sección A" },
-  { id: "3B", label: "3er Año", section: "Sección B" },
-];
+// ── Obtiene secciones únicas con conteo desde Firestore ──────────────────────
+async function fetchSectionsWithCounts() {
+  // Alumnos por sección
+  const alumnosSnap = await getDocs(collection(db, "alumnos"));
+  const totalPorSala = {};
+  alumnosSnap.forEach((d) => {
+    const sala = d.data().sala;
+    if (sala) totalPorSala[sala] = (totalPorSala[sala] || 0) + 1;
+  });
+
+  // Asistencias de hoy
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const asistSnap = await getDocs(
+    query(
+      collection(db, "asistencias"),
+      where("fecha_cliente", ">=", Timestamp.fromDate(todayStart))
+    )
+  );
+  const presentesPorSala = {};
+  asistSnap.forEach((d) => {
+    const sala = d.data().sala;
+    if (sala) presentesPorSala[sala] = (presentesPorSala[sala] || 0) + 1;
+  });
+
+  return Object.keys(totalPorSala)
+    .sort()
+    .map((id) => ({
+      id,
+      label: GRADE_LABELS[id] || id,
+      total: totalPorSala[id] || 0,
+      presentes: presentesPorSala[id] || 0,
+    }));
+}
+
+// ── Card de sección ──────────────────────────────────────────────────────────
+function SectionCard({ section, onSelect }) {
+  const pct = section.total > 0 ? Math.round((section.presentes / section.total) * 100) : 0;
+  return (
+    <button
+      onClick={() => onSelect(section.id)}
+      className="w-full text-left transition-all duration-200 active:scale-95"
+      style={{ background: "none", border: "none", padding: 0 }}
+    >
+      <div
+        className="rounded-2xl p-5"
+        style={{
+          background: "linear-gradient(135deg, rgba(109,40,217,0.18) 0%, rgba(79,70,229,0.12) 100%)",
+          border: "1px solid rgba(139,92,246,0.3)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(109,40,217,0.08)",
+          backdropFilter: "blur(12px)",
+        }}
+        onMouseEnter={(e) => (e.currentTarget.style.border = "1px solid rgba(139,92,246,0.6)")}
+        onMouseLeave={(e) => (e.currentTarget.style.border = "1px solid rgba(139,92,246,0.3)")}
+      >
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <span
+              className="text-xs font-bold px-2.5 py-1 rounded-lg mb-2 inline-block"
+              style={{ background: "rgba(109,40,217,0.4)", color: "#c4b5fd" }}
+            >
+              {section.id}
+            </span>
+            <p className="text-white font-bold text-base leading-tight">{section.label}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-2xl font-bold text-white tabular-nums">
+              {section.presentes}
+              <span className="text-purple-400 text-base font-medium">/{section.total}</span>
+            </p>
+            <p className="text-purple-400 text-xs mt-0.5">presentes hoy</p>
+          </div>
+        </div>
+
+        {/* Barra de progreso */}
+        <div
+          className="w-full h-1.5 rounded-full overflow-hidden"
+          style={{ background: "rgba(255,255,255,0.08)" }}
+        >
+          <div
+            className="h-full rounded-full transition-all duration-500"
+            style={{
+              width: `${pct}%`,
+              background: pct >= 80
+                ? "linear-gradient(90deg, #10b981, #34d399)"
+                : pct >= 50
+                ? "linear-gradient(90deg, #6d28d9, #8b5cf6)"
+                : "linear-gradient(90deg, #4f46e5, #6d28d9)",
+            }}
+          />
+        </div>
+        <p className="text-purple-500 text-xs mt-1.5 text-right">{pct}% de asistencia</p>
+      </div>
+    </button>
+  );
+}
 
 // ── Pantalla de selección de grado ──────────────────────────────────────────
 function GradeSelector({ onSelect }) {
   const navigate = useNavigate();
+  const [sections, setSections] = useState([]);
+  const [loadingSections, setLoadingSections] = useState(true);
+
+  useEffect(() => {
+    fetchSectionsWithCounts()
+      .then(setSections)
+      .finally(() => setLoadingSections(false));
+  }, []);
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -78,35 +175,24 @@ function GradeSelector({ onSelect }) {
       </header>
 
       <div className="flex-1 flex flex-col px-5 pb-10 gap-3 relative z-10 justify-center">
-        <p className="text-purple-400 text-xs text-center mb-2">
-          No se detectó un QR. Elige tu sección manualmente:
-        </p>
-        {GRADES_LIST.map((g) => (
-          <button
-            key={g.id}
-            onClick={() => onSelect(g.id)}
-            className="w-full py-4 rounded-2xl text-white font-semibold flex items-center justify-between px-5 transition-all duration-200 active:scale-95"
-            style={{
-              background: "rgba(109,40,217,0.15)",
-              border: "1px solid rgba(109,40,217,0.35)",
-            }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(109,40,217,0.3)")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "rgba(109,40,217,0.15)")}
-          >
-            <span>{g.label} — {g.section}</span>
-            <span
-              className="text-xs font-bold px-2 py-0.5 rounded-lg"
-              style={{ background: "rgba(109,40,217,0.4)" }}
-            >
-              {g.id}
-            </span>
-          </button>
-        ))}
+        {loadingSections ? (
+          <div className="flex items-center justify-center py-10 gap-2">
+            <IconLoader className="w-5 h-5 text-purple-400 animate-spin" />
+            <span className="text-purple-400 text-sm">Cargando secciones…</span>
+          </div>
+        ) : sections.length === 0 ? (
+          <p className="text-purple-500 text-sm text-center py-10">
+            No hay secciones registradas. Contacta al administrador.
+          </p>
+        ) : (
+          sections.map((s) => (
+            <SectionCard key={s.id} section={s} onSelect={onSelect} />
+          ))
+        )}
 
-        {/* Botón de cerrar sesión */}
         <button
           onClick={handleLogout}
-          className="w-full py-3 rounded-2xl text-purple-400 text-sm font-medium mt-4 transition-all duration-200"
+          className="w-full py-3 rounded-2xl text-purple-400 text-sm font-medium mt-2 transition-all duration-200"
           style={{ border: "1px solid rgba(139,92,246,0.2)" }}
         >
           Cerrar sesión
