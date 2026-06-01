@@ -6,7 +6,7 @@
  */
 
 import React from "react";
-import { IconCheck, IconAlert } from "../common/Icons.jsx";
+import { IconCheck, IconAlert, IconShield } from "../common/Icons.jsx";
 
 export function SuccessPanel({ gradeLabel }) {
   return (
@@ -37,6 +37,28 @@ export function SuccessPanel({ gradeLabel }) {
           No es posible falsificar o alterar este registro.
         </p>
       </div>
+    </div>
+  );
+}
+
+export function DeviceBlockedPanel() {
+  return (
+    <div
+      className="rounded-2xl p-8 text-center animate-slide-up"
+      style={{ background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.35)" }}
+    >
+      <div
+        className="w-24 h-24 rounded-full mx-auto mb-5 flex items-center justify-center text-red-400"
+        style={{ background: "rgba(220,38,38,0.15)", boxShadow: "0 0 40px rgba(220,38,38,0.2)" }}
+      >
+        <IconShield className="w-12 h-12" />
+      </div>
+
+      <h2 className="text-xl font-bold text-white mb-2">Dispositivo no autorizado</h2>
+      <p className="text-red-300 text-sm font-medium">Esta cuenta ya fue vinculada a otro dispositivo</p>
+      <p className="text-purple-400 text-xs mt-3 max-w-xs mx-auto leading-relaxed">
+        Por seguridad, cada cuenta solo puede marcar asistencia desde el dispositivo registrado. Contacta al administrador para restablecer tu acceso.
+      </p>
     </div>
   );
 }

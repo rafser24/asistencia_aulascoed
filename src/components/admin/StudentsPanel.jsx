@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { getAlumnos, crearAlumno, actualizarAlumno, eliminarAlumno, importarAlumnos, parsearCSV } from "../../services/studentsService.js";
-import { IconPlus, IconEdit, IconTrash, IconLoader, IconCheck, IconDownload } from "../common/Icons.jsx";
+import { resetearDispositivo } from "../../services/attendanceService.js";
+import { IconPlus, IconEdit, IconTrash, IconLoader, IconCheck, IconDownload, IconShield } from "../common/Icons.jsx";
 
 // ── Plantilla CSV ────────────────────────────────────────────────────────────
 const CSV_TEMPLATE = `Codigo,ID Seccion,NIE,Nombre,Email,Contrasena,Seccion,Falto,Justificacion,Observacion
@@ -370,6 +371,16 @@ export default function StudentsPanel({ grades }) {
     fetchAlumnos();
   };
 
+  const handleResetDispositivo = async (alumno) => {
+    if (!alumno.uid) {
+      alert("Este alumno aún no ha iniciado sesión, no tiene dispositivo vinculado.");
+      return;
+    }
+    if (!window.confirm(`¿Restablecer dispositivo de ${alumno.nombre}? Podrá volver a marcar desde cualquier teléfono una sola vez.`)) return;
+    await resetearDispositivo(alumno.uid);
+    alert(`Dispositivo de ${alumno.nombre} restablecido correctamente.`);
+  };
+
   return (
     <div className="animate-fade-in">
       {/* ── Barra de filtros ── */}
@@ -537,6 +548,11 @@ export default function StudentsPanel({ grades }) {
                             className="p-1.5 rounded-lg text-purple-400 hover:text-white transition-colors"
                             style={{ background: "rgba(109,40,217,0.15)" }} title="Editar">
                             <IconEdit className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleResetDispositivo(alumno)}
+                            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 transition-colors"
+                            style={{ background: "rgba(245,158,11,0.12)" }} title="Restablecer dispositivo">
+                            <IconShield className="w-3.5 h-3.5" />
                           </button>
                           <button onClick={() => handleDelete(alumno)}
                             className="p-1.5 rounded-lg text-red-400 hover:text-red-300 transition-colors"

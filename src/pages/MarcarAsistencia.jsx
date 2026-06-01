@@ -22,6 +22,7 @@ import GeofenceStatus from "../components/student/GeofenceStatus.jsx";
 import {
   SuccessPanel,
   DuplicatePanel,
+  DeviceBlockedPanel,
 } from "../components/student/AttendanceResult.jsx";
 import { IconShield, IconCheck, IconLoader, IconAlert } from "../components/common/Icons.jsx";
 
@@ -342,6 +343,8 @@ export default function MarcarAsistencia() {
           <SuccessPanel gradeLabel={gradeLabel} />
         ) : submitStatus === "duplicate" ? (
           <DuplicatePanel gradeLabel={gradeLabel} />
+        ) : submitStatus === "device_blocked" ? (
+          <DeviceBlockedPanel />
         ) : (
           <div className="flex flex-col gap-3 flex-1 justify-end">
             {/* Error de envío */}

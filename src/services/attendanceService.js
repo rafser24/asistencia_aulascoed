@@ -13,8 +13,54 @@ import {
   orderBy,
   serverTimestamp,
   Timestamp,
+  doc,
+  getDoc,
+  setDoc,
 } from "firebase/firestore";
 import { db } from "./firebase.js";
+
+// ── Vinculación de dispositivo ───────────────────────────────────────────────
+
+/** Genera o recupera el ID único de este dispositivo desde localStorage */
+function getLocalDeviceId() {
+  let id = localStorage.getItem("coed_device_id");
+  if (!id) {
+    id = crypto.randomUUID();
+    localStorage.setItem("coed_device_id", id);
+  }
+  return id;
+}
+
+/**
+ * Verifica si el dispositivo actual está autorizado para este UID.
+ * - Si no hay registro previo: vincula este dispositivo y retorna true.
+ * - Si hay registro y coincide: retorna true.
+ * - Si hay registro y NO coincide: retorna false.
+ *
+ * @param {string} uid
+ * @returns {Promise<boolean>}
+ */
+export async function verificarDispositivo(uid) {
+  const deviceId = getLocalDeviceId();
+  const ref = doc(db, "dispositivos", uid);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    // Primera vez: vincular
+    await setDoc(ref, { deviceId, vinculadoEn: serverTimestamp() });
+    return true;
+  }
+
+  return snap.data().deviceId === deviceId;
+}
+
+/**
+ * Restablece la vinculación de dispositivo de un alumno (uso exclusivo del admin).
+ * @param {string} uid
+ */
+export async function resetearDispositivo(uid) {
+  await setDoc(doc(db, "dispositivos", uid), { deviceId: null, vinculadoEn: null });
+}
 
 const COLLECTION = "asistencias";
 

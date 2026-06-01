@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { hasMarcadoHoy, registrarAsistencia } from "../services/attendanceService.js";
+import { hasMarcadoHoy, registrarAsistencia, verificarDispositivo } from "../services/attendanceService.js";
 
 /**
  * @typedef {'idle'|'loading'|'success'|'duplicate'|'error'} SubmitStatus
@@ -24,14 +24,21 @@ export function useAttendance({ uid, nombre, email, sala, grado }) {
     setSubmitError(null);
 
     try {
-      // 1. Anti-duplicado: verificar si ya marcó hoy
+      // 1. Verificar dispositivo vinculado
+      const dispositivoOk = await verificarDispositivo(uid);
+      if (!dispositivoOk) {
+        setSubmitStatus("device_blocked");
+        return;
+      }
+
+      // 2. Anti-duplicado: verificar si ya marcó hoy
       const yaMarcó = await hasMarcadoHoy(uid, sala);
       if (yaMarcó) {
         setSubmitStatus("duplicate");
         return;
       }
 
-      // 2. Registrar con timestamp del servidor
+      // 3. Registrar con timestamp del servidor
       await registrarAsistencia({ uid, nombre, email, sala, grado });
       setSubmitStatus("success");
     } catch (err) {
