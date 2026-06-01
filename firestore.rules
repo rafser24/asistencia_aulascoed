@@ -1,0 +1,41 @@
+// firestore.rules
+// Reglas de seguridad de Firestore para Asistencia COED
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Config (lista de admins) ─────────────────────────────────────────────
+    match /config/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── Admins (legacy) ──────────────────────────────────────────────────────
+    match /admins/{docId} {
+      allow read: if request.auth != null;
+      allow write: if false;
+    }
+
+    // ── Alumnos ──────────────────────────────────────────────────────────────
+    match /alumnos/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+    // ── Asistencias ──────────────────────────────────────────────────────────
+    match /asistencias/{docId} {
+      allow create: if
+        request.auth != null
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.keys().hasAll([
+          'uid', 'nombre', 'email', 'sala', 'grado', 'estado',
+          'timestamp', 'fecha_cliente'
+        ])
+        && request.resource.data.estado == 'Presente';
+
+      allow read, list: if request.auth != null;
+
+      allow update, delete: if false;
+    }
+  }
+}

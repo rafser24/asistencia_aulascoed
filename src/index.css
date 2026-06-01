@@ -1,0 +1,110 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Variables globales ─────────────────────────────────────────────────────── */
+:root {
+  --bg-deep: #05030f;
+  --bg-base: #0f0c29;
+  --bg-card: #150d3b;
+  --bg-surface: #1a1035;
+  --border-subtle: rgba(139, 92, 246, 0.15);
+  --border-medium: rgba(139, 92, 246, 0.3);
+  --text-primary: #ede9fe;
+  --text-secondary: #a78bfa;
+  --text-muted: #6b5fa0;
+  --accent-violet: #6d28d9;
+  --accent-indigo: #4f46e5;
+  --accent-purple: #7c3aed;
+  --success: #10b981;
+  --danger: #dc2626;
+  --warning: #f59e0b;
+}
+
+/* ── Reset y base ───────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'DM Sans', 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar personalizada ────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--accent-violet);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-purple);
+}
+
+/* ── Input date en dark mode ────────────────────────────────────────────────── */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8) sepia(1) hue-rotate(220deg);
+  cursor: pointer;
+}
+
+/* ── Selects en dark mode ───────────────────────────────────────────────────── */
+select option {
+  background-color: #1a1035;
+  color: #ede9fe;
+}
+
+/* ── Animaciones globales ───────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(109, 40, 217, 0.08) 25%,
+    rgba(109, 40, 217, 0.18) 50%,
+    rgba(109, 40, 217, 0.08) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(109, 40, 217, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(109, 40, 217, 0.6); }
+}
+
+.glow-active {
+  animation: glow-pulse 2s ease-in-out infinite;
+}
+
+/* ── Utilidades ─────────────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.card {
+  background: linear-gradient(145deg, #1a1035 0%, #110d2a 100%);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+}
