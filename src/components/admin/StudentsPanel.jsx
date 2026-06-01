@@ -8,11 +8,11 @@ import { getAlumnos, crearAlumno, actualizarAlumno, eliminarAlumno, importarAlum
 import { IconPlus, IconEdit, IconTrash, IconLoader, IconCheck, IconDownload } from "../common/Icons.jsx";
 
 // ── Plantilla CSV ────────────────────────────────────────────────────────────
-const CSV_TEMPLATE = `Codigo,ID Seccion,NIE,Nombre,Email,Seccion,Falto,Justificacion,Observacion
-A,17998,6953846,Juan García López,juan.garcia@clases.edu.sv,1A,No,,Sin observaciones
-B,17999,3486219,María Martínez Perez,maria.martinez@clases.edu.sv,1A,Sí,Enfermedad,Cita médica
-A,18000,7821034,Carlos Hernández Díaz,carlos.hernandez@clases.edu.sv,1B,No,,
-B,18001,5647291,Ana Rodríguez Flores,ana.rodriguez@clases.edu.sv,2A,Sí,No Justificado,
+const CSV_TEMPLATE = `Codigo,ID Seccion,NIE,Nombre,Email,Contrasena,Seccion,Falto,Justificacion,Observacion
+A,17998,6953846,Juan García López,juan.garcia@clases.edu.sv,clave123,1A,No,,Sin observaciones
+B,17999,3486219,María Martínez Perez,maria.martinez@clases.edu.sv,clave123,1A,Sí,Enfermedad,Cita médica
+A,18000,7821034,Carlos Hernández Díaz,carlos.hernandez@clases.edu.sv,clave123,1B,No,,
+B,18001,5647291,Ana Rodríguez Flores,ana.rodriguez@clases.edu.sv,clave123,2A,Sí,No Justificado,
 `;
 
 function descargarPlantilla() {
@@ -45,7 +45,7 @@ function ImportModal({ rows, onConfirm, onClose, importing }) {
           <table className="w-full text-xs" style={{ borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "rgba(109,40,217,0.14)" }}>
-                {["Código","ID Sección","NIE","Nombre","Email","Sección","Faltó","Justificación","Observación"].map((h) => (
+                {["Código","ID Sección","NIE","Nombre","Email","Contraseña","Sección","Faltó","Justificación","Observación"].map((h) => (
                   <th key={h} className="px-3 py-2 text-left text-purple-400 font-semibold uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -58,6 +58,7 @@ function ImportModal({ rows, onConfirm, onClose, importing }) {
                   <td className="px-3 py-2 text-purple-200 font-mono">{r.nie || "—"}</td>
                   <td className="px-3 py-2 text-white">{r.nombre}</td>
                   <td className="px-3 py-2 text-purple-300">{r.email}</td>
+                  <td className="px-3 py-2 text-purple-400">{r.password ? "••••••" : <span className="text-red-400">sin contraseña</span>}</td>
                   <td className="px-3 py-2"><span className="px-2 py-0.5 rounded-full font-bold" style={{ background: "rgba(109,40,217,0.25)", color: "#c4b5fd" }}>{r.sala}</span></td>
                   <td className="px-3 py-2"><span className={r.falto === "Sí" ? "text-red-400" : "text-emerald-400"}>{r.falto}</span></td>
                   <td className="px-3 py-2 text-purple-300">{r.falto === "Sí" ? r.justificacion : "—"}</td>
@@ -118,6 +119,7 @@ function AlumnoForm({ initial = {}, onSave, onCancel, grades }) {
   const [form, setForm] = useState({
     nombre:        initial.nombre        || "",
     email:         initial.email         || "",
+    password:      "",
     sala:          initial.sala          || grades[0]?.id || "1A",
     codigo:        initial.codigo        || "",
     idSeccion:     initial.idSeccion     || "",
@@ -126,6 +128,7 @@ function AlumnoForm({ initial = {}, onSave, onCancel, grades }) {
     justificacion: initial.justificacion || "No Justificado",
     observacion:   initial.observacion   || "",
   });
+  const [showPass, setShowPass] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const set = (key) => (e) => setForm((p) => ({ ...p, [key]: e.target.value }));
@@ -150,6 +153,31 @@ function AlumnoForm({ initial = {}, onSave, onCancel, grades }) {
         <div className="col-span-2">
           <label className="text-purple-400 text-xs mb-1 block">Correo electrónico *</label>
           <input type="email" value={form.email} onChange={set("email")} placeholder="correo@ejemplo.com" required style={inputStyle} />
+        </div>
+
+        {/* Contraseña */}
+        <div className="col-span-2">
+          <label className="text-purple-400 text-xs mb-1 block">
+            Contraseña {initial.id ? <span className="text-purple-600">(dejar vacío para no cambiar)</span> : <span className="text-red-400">*</span>}
+          </label>
+          <div style={{ position: "relative" }}>
+            <input
+              type={showPass ? "text" : "password"}
+              value={form.password}
+              onChange={set("password")}
+              placeholder="Mínimo 6 caracteres"
+              minLength={form.password ? 6 : undefined}
+              required={!initial.id}
+              style={{ ...inputStyle, paddingRight: "40px" }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPass((p) => !p)}
+              style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#a78bfa" }}
+            >
+              {showPass ? "🙈" : "👁"}
+            </button>
+          </div>
         </div>
 
         {/* Código */}

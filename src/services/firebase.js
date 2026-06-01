@@ -21,4 +21,19 @@ const app = initializeApp(firebaseConfig);
 
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+
+// App secundaria para crear usuarios sin cerrar sesión del admin
+import { getApp as _getApp } from "firebase/app";
+let _secondaryAuth = null;
+export function getSecondaryAuth() {
+  if (_secondaryAuth) return _secondaryAuth;
+  try {
+    _secondaryAuth = getAuth(_getApp("secondary"));
+  } catch {
+    const secondaryApp = initializeApp(firebaseConfig, "secondary");
+    _secondaryAuth = getAuth(secondaryApp);
+  }
+  return _secondaryAuth;
+}
+
 export default app;

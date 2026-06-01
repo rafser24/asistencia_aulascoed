@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback } from "react";
 // ── Coordenadas fijas del Centro Educativo ──────────────────────────────────
 // Complejo Educativo Cantón Guadalupe La Zorra, San Luis La Herradura, La Paz, El Salvador
 const SCHOOL = { lat: 13.3490383, lng: -88.88223185 };
-const MAX_METROS = 100;
+const MAX_METROS = 350;
 
 /**
  * Fórmula de Haversine — distancia en metros entre dos puntos GPS.

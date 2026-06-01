@@ -7,7 +7,8 @@ import {
   collection, addDoc, updateDoc, deleteDoc,
   doc, getDocs, query, where, serverTimestamp,
 } from "firebase/firestore";
-import { db } from "./firebase.js";
+import { createUserWithEmailAndPassword, updateProfile, signOut } from "firebase/auth";
+import { db, getSecondaryAuth } from "./firebase.js";
 
 const COL = "alumnos";
 
@@ -19,11 +20,21 @@ export async function getAlumnos(sala = null) {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-/** Crea un alumno nuevo */
-export async function crearAlumno({ nombre, email, sala, codigo = "", nie = "", idSeccion = "", falto = "No", justificacion = "", observacion = "" }) {
+/** Crea un alumno nuevo y su cuenta de Firebase Auth */
+export async function crearAlumno({ nombre, email, password = "", sala, codigo = "", nie = "", idSeccion = "", falto = "No", justificacion = "", observacion = "" }) {
+  const emailClean = email.trim().toLowerCase();
+
+  // Crear cuenta en Firebase Auth usando app secundaria (no cierra sesión del admin)
+  if (password && password.trim().length >= 6) {
+    const secondaryAuth = getSecondaryAuth();
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, emailClean, password.trim());
+    await updateProfile(cred.user, { displayName: nombre.trim() });
+    await signOut(secondaryAuth);
+  }
+
   const ref = await addDoc(collection(db, COL), {
     nombre: nombre.trim(),
-    email: email.trim().toLowerCase(),
+    email: emailClean,
     sala,
     codigo: codigo.trim(),
     nie: nie.trim(),
@@ -117,6 +128,7 @@ export function parsearCSV(text) {
         nie:           raw.nie?.trim() || "",
         nombre:        raw.nombre?.trim() || "",
         email:         raw.email?.trim().toLowerCase() || "",
+        password:      raw.contrasena?.trim() || raw.password?.trim() || raw.contraseña?.trim() || "",
         sala:          VALID_SALAS.includes(sala) ? sala : "1A",
         falto,
         justificacion: falto === "Sí" ? just : "",
