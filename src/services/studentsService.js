@@ -101,12 +101,16 @@ export function parsearCSV(text) {
     return cols;
   };
 
-  const normalizar = (s) => s.toLowerCase()
-    .replace(/[áàä]/g, "a").replace(/[éèë]/g, "e").replace(/[íìï]/g, "i")
-    .replace(/[óòö]/g, "o").replace(/[úùü]/g, "u").replace(/ñ/g, "n")
-    .replace("id seccion", "idseccion").replace("id_seccion", "idseccion")
-    .replace("seccion", "sala").replace("sección", "sala")
-    .replace(/ /g, "").trim();
+  const normalizar = (s) => {
+    const n = s.toLowerCase()
+      .replace(/[áàä]/g, "a").replace(/[éèë]/g, "e").replace(/[íìï]/g, "i")
+      .replace(/[óòö]/g, "o").replace(/[úùü]/g, "u").replace(/ñ/g, "n")
+      .replace(/[\s_]/g, "").trim();
+    // Mapeo exacto para evitar que "idseccion" se convierta en "idsala"
+    if (n === "idseccion" || n === "id_seccion") return "idseccion";
+    if (n === "seccion" || n === "sala") return "sala";
+    return n;
+  };
   const headers = splitLine(lines[0]).map(normalizar);
 
   const VALID_SALAS = ["1A","1B","2A","2B","3A","3B"];
