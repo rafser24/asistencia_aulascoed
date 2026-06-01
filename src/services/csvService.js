@@ -1,68 +1,85 @@
 /**
  * services/csvService.js
- * Utilidad de exportación CSV usando URL.createObjectURL nativo del navegador.
- * Sin librerías de terceros.
+ * Exportación CSV para el sistema de asistencia COED.
  */
 
-/**
- * Formatea un timestamp de Firestore a fecha y hora locales.
- * @param {import("firebase/firestore").Timestamp} ts
- * @returns {{ fecha: string, hora: string }}
- */
-function formatTimestamp(ts) {
-  const date = ts?.toDate ? ts.toDate() : new Date();
-  return {
-    fecha: date.toLocaleDateString("es-SV", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    }),
-    hora: date.toLocaleTimeString("es-SV", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    }),
-  };
+import { collection, getDocs, query, where, Timestamp } from "firebase/firestore";
+import { db } from "./firebase.js";
+
+function descargar(contenido, nombre) {
+  const blob = new Blob(["﻿" + contenido], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 /**
- * Genera y descarga automáticamente un archivo .csv
- * a partir del arreglo de registros de asistencia filtrados.
+ * Exporta asistencia en el formato oficial COED:
+ * Código, ID Sección, Fecha, NIE, Faltó, Justificación, Observación
  *
- * Columnas: Nombre, Grado, Fecha, Hora Entrada, Estado
+ * Cruza todos los alumnos contra los que marcaron ese día.
+ * Si el alumno NO marcó → Faltó: Sí
+ * Si el alumno SÍ marcó → Faltó: No
  *
- * @param {Array<Object>} data — Registros de asistencia
- * @param {string} dateStr — Fecha del reporte (para el nombre del archivo)
+ * @param {string} dateStr - "YYYY-MM-DD"
+ * @param {string|null} sala - null para todas las secciones
  */
-export function exportarCSV(data, dateStr) {
-  if (!data || data.length === 0) return;
+export async function exportarAsistenciaOficial(dateStr, sala = null) {
+  // 1. Obtener todos los alumnos (filtrado por sala si aplica)
+  const alumnosQuery = sala
+    ? query(collection(db, "alumnos"), where("sala", "==", sala))
+    : collection(db, "alumnos");
+  const alumnosSnap = await getDocs(alumnosQuery);
+  const alumnos = alumnosSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
 
-  const HEADERS = ["Nombre", "Grado", "Fecha", "Hora Entrada", "Estado"];
+  if (alumnos.length === 0) return;
 
-  const rows = data.map((row) => {
-    const { fecha, hora } = formatTimestamp(row.timestamp);
+  // 2. Obtener asistencias del día
+  const start = new Date(dateStr + "T00:00:00");
+  const end   = new Date(dateStr + "T23:59:59");
+  const asistConstraints = [
+    where("fecha_cliente", ">=", Timestamp.fromDate(start)),
+    where("fecha_cliente", "<=", Timestamp.fromDate(end)),
+  ];
+  if (sala) asistConstraints.push(where("sala", "==", sala));
+
+  const asistSnap = await getDocs(query(collection(db, "asistencias"), ...asistConstraints));
+
+  // UIDs que marcaron hoy (identificados por uid o email como fallback)
+  const uidsMarcaron = new Set(asistSnap.docs.map((d) => d.data().uid));
+  const emailsMarcaron = new Set(asistSnap.docs.map((d) => d.data().email));
+
+  // 3. Formatear fecha DD/MM/YY
+  const [y, m, d] = dateStr.split("-");
+  const fechaFmt = `${d}/${m}/${String(y).slice(-2)}`;
+
+  // 4. Construir filas ordenadas por sala y nombre
+  const HEADERS = ["Código", "ID Sección", "Fecha", "NIE", "Faltó", "Justificación", "Observación"];
+
+  alumnos.sort(
+    (a, b) => (a.sala || "").localeCompare(b.sala || "") || (a.nombre || "").localeCompare(b.nombre || "")
+  );
+
+  const rows = alumnos.map((al) => {
+    const marcó = uidsMarcaron.has(al.uid) || emailsMarcaron.has(al.email);
+    const falto = marcó ? "No" : "Sí";
     return [
-      `"${row.nombre || row.email || "Sin nombre"}"`,
-      `"${row.grado || row.sala || "—"}"`,
-      `"${fecha}"`,
-      `"${hora}"`,
-      `"${row.estado || "Presente"}"`,
+      `"${al.codigo || "A"}"`,
+      `"${al.idSeccion || ""}"`,
+      `"${fechaFmt}"`,
+      `"${al.nie || ""}"`,
+      `"${falto}"`,
+      `"${falto === "Sí" ? (al.justificacion || "") : ""}"`,
+      `"${al.observacion || ""}"`,
     ].join(",");
   });
 
-  // BOM \uFEFF garantiza que Excel abra el CSV en UTF-8 correctamente
-  const csvContent = "\uFEFF" + [HEADERS.join(","), ...rows].join("\n");
-
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `asistencia_coed_${dateStr}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-
-  // Liberar memoria del objeto URL
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
+  const contenido = [HEADERS.join(","), ...rows].join("\n");
+  const salaTag = sala ? `_${sala}` : "_todas";
+  descargar(contenido, `asistencia_coed_${dateStr}${salaTag}.csv`);
 }

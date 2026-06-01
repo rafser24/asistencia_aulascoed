@@ -17,8 +17,8 @@ import AttendanceTable from "../../components/admin/AttendanceTable.jsx";
 import StatPill from "../../components/admin/StatPill.jsx";
 import StudentsPanel from "../../components/admin/StudentsPanel.jsx";
 import { getAsistenciasPorFecha } from "../../services/attendanceService.js";
-import { exportarCSV } from "../../services/csvService.js";
-import { IconPlus } from "../../components/common/Icons.jsx";
+import { exportarAsistenciaOficial } from "../../services/csvService.js";
+import { IconPlus, IconDownload } from "../../components/common/Icons.jsx";
 
 // ── Configuración de grados por defecto ─────────────────────────────────────
 const DEFAULT_GRADES = [
@@ -161,6 +161,7 @@ export default function AdminDashboard() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   // ── Fetch de registros ────────────────────────────────────────────────────
   const handleSearch = useCallback(async () => {
@@ -183,10 +184,15 @@ export default function AdminDashboard() {
     }
   }, [selectedDate, selectedGrade]);
 
-  // ── Exportar CSV ──────────────────────────────────────────────────────────
-  const handleExport = useCallback(() => {
-    exportarCSV(records, selectedDate);
-  }, [records, selectedDate]);
+  // ── Exportar CSV oficial ──────────────────────────────────────────────────
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      await exportarAsistenciaOficial(selectedDate, selectedGrade === "all" ? null : selectedGrade);
+    } finally {
+      setExporting(false);
+    }
+  }, [selectedDate, selectedGrade]);
 
   // ── Stats ──────────────────────────────────────────────────────────────────
   const stats = useMemo(
@@ -272,10 +278,24 @@ export default function AdminDashboard() {
               selectedGrade={selectedGrade}
               onGradeChange={setSelectedGrade}
               onSearch={handleSearch}
-              onExport={handleExport}
               hasRecords={records.length > 0}
               loading={loading}
             />
+
+            {/* Botón exportar asistencia oficial */}
+            <div className="flex justify-end mb-4">
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90 active:scale-95 disabled:opacity-60"
+                style={{ background: "linear-gradient(135deg, #059669, #10b981)" }}
+              >
+                {exporting
+                  ? <><span className="animate-spin">⏳</span> Generando…</>
+                  : <><IconDownload className="w-4 h-4" /> Exportar Asistencia</>
+                }
+              </button>
+            </div>
 
             {/* Stats rápidas — solo cuando hay datos */}
             {records.length > 0 && !loading && (
