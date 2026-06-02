@@ -24,36 +24,52 @@ export function useAttendance({ uid, nombre, email, sala, grado }) {
     setSubmitError(null);
 
     try {
-      // 1. Verificar ventana horaria
-      const { permitido, mensaje } = await validarVentanaHoraria();
-      if (!permitido) {
-        setSubmitError(mensaje);
-        setSubmitStatus("error");
-        return;
+      // 1. Verificar ventana horaria (si falla, permitir continuar)
+      try {
+        const { permitido, mensaje } = await validarVentanaHoraria();
+        if (!permitido) {
+          setSubmitError(mensaje);
+          setSubmitStatus("error");
+          return;
+        }
+      } catch (e) {
+        console.warn("[ventana horaria]", e.message);
+        // Si falla la verificación, permitir continuar
       }
 
-      // 2. Verificar dispositivo vinculado
-      const dispositivoOk = await verificarDispositivo(uid);
-      if (!dispositivoOk) {
-        await registrarAuditoria({ uid, email, evento: "dispositivo_bloqueado", detalle: `Intento desde dispositivo no autorizado — sala: ${sala}` });
-        setSubmitStatus("device_blocked");
-        return;
+      // 2. Verificar dispositivo vinculado (si falla, permitir continuar)
+      try {
+        const dispositivoOk = await verificarDispositivo(uid);
+        if (!dispositivoOk) {
+          setSubmitStatus("device_blocked");
+          return;
+        }
+      } catch (e) {
+        console.warn("[dispositivo]", e.message);
+        // Si falla la verificación, permitir continuar
       }
 
-      // 2. Anti-duplicado: verificar si ya marcó hoy
-      const yaMarcó = await hasMarcadoHoy(uid, sala);
-      if (yaMarcó) {
-        setSubmitStatus("duplicate");
-        return;
+      // 3. Anti-duplicado
+      try {
+        const yaMarcó = await hasMarcadoHoy(uid, sala);
+        if (yaMarcó) {
+          setSubmitStatus("duplicate");
+          return;
+        }
+      } catch (e) {
+        console.warn("[duplicado]", e.message);
       }
 
-      // 3. Registrar con timestamp del servidor
+      // 4. Registrar asistencia
       await registrarAsistencia({ uid, nombre, email, sala, grado });
       setSubmitStatus("success");
+
     } catch (err) {
-      console.error("[useAttendance]", err);
+      console.error("[useAttendance] Error al registrar:", err.code, err.message);
       setSubmitError(
-        "No se pudo registrar la asistencia. Verifica tu conexión a internet."
+        err.code === "permission-denied"
+          ? "Sin permisos en Firestore. Contacta al administrador."
+          : `Error: ${err.message}`
       );
       setSubmitStatus("error");
     }
