@@ -64,6 +64,65 @@ export async function resetearDispositivo(uid) {
 
 const COLLECTION = "asistencias";
 
+// ── Logs de auditoría ────────────────────────────────────────────────────────
+export async function registrarAuditoria({ uid, email, evento, detalle }) {
+  try {
+    await addDoc(collection(db, "auditoria"), {
+      uid: uid || null,
+      email: email || null,
+      evento,
+      detalle: detalle || null,
+      timestamp: serverTimestamp(),
+    });
+  } catch { /* no interrumpir el flujo principal */ }
+}
+
+// ── Ventana horaria ──────────────────────────────────────────────────────────
+
+/**
+ * Obtiene la configuración de ventana horaria del día actual.
+ * Documento: config/ventana_horaria
+ * Campos: horaInicio ("07:00"), horaFin ("08:00"), activo (bool)
+ */
+export async function getVentanaHoraria() {
+  const snap = await getDoc(doc(db, "config", "ventana_horaria"));
+  if (!snap.exists()) return null;
+  return snap.data();
+}
+
+/**
+ * Guarda la ventana horaria (solo admin).
+ * @param {{ horaInicio: string, horaFin: string, activo: boolean }} config
+ */
+export async function setVentanaHoraria({ horaInicio, horaFin, activo }) {
+  await setDoc(doc(db, "config", "ventana_horaria"), { horaInicio, horaFin, activo });
+}
+
+/**
+ * Valida si la hora actual está dentro de la ventana permitida.
+ * Si no hay ventana configurada o activo=false → permite siempre.
+ * @returns {Promise<{ permitido: boolean, mensaje: string|null }>}
+ */
+export async function validarVentanaHoraria() {
+  const config = await getVentanaHoraria();
+  if (!config || !config.activo) return { permitido: true, mensaje: null };
+
+  const ahora = new Date();
+  const [hI, mI] = config.horaInicio.split(":").map(Number);
+  const [hF, mF] = config.horaFin.split(":").map(Number);
+
+  const inicio = new Date(ahora); inicio.setHours(hI, mI, 0, 0);
+  const fin    = new Date(ahora); fin.setHours(hF, mF, 0, 0);
+
+  if (ahora < inicio) {
+    return { permitido: false, mensaje: `El registro de asistencia abre a las ${config.horaInicio}. Vuelve en ese horario.` };
+  }
+  if (ahora > fin) {
+    return { permitido: false, mensaje: `El período de asistencia cerró a las ${config.horaFin}. Contacta al administrador.` };
+  }
+  return { permitido: true, mensaje: null };
+}
+
 /**
  * Verifica si el alumno ya marcó asistencia hoy para ese grado.
  * @param {string} uid

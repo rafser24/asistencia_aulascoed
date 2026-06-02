@@ -5,7 +5,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { hasMarcadoHoy, registrarAsistencia, verificarDispositivo } from "../services/attendanceService.js";
+import { hasMarcadoHoy, registrarAsistencia, verificarDispositivo, validarVentanaHoraria, registrarAuditoria } from "../services/attendanceService.js";
 
 /**
  * @typedef {'idle'|'loading'|'success'|'duplicate'|'error'} SubmitStatus
@@ -24,9 +24,18 @@ export function useAttendance({ uid, nombre, email, sala, grado }) {
     setSubmitError(null);
 
     try {
-      // 1. Verificar dispositivo vinculado
+      // 1. Verificar ventana horaria
+      const { permitido, mensaje } = await validarVentanaHoraria();
+      if (!permitido) {
+        setSubmitError(mensaje);
+        setSubmitStatus("error");
+        return;
+      }
+
+      // 2. Verificar dispositivo vinculado
       const dispositivoOk = await verificarDispositivo(uid);
       if (!dispositivoOk) {
+        await registrarAuditoria({ uid, email, evento: "dispositivo_bloqueado", detalle: `Intento desde dispositivo no autorizado — sala: ${sala}` });
         setSubmitStatus("device_blocked");
         return;
       }

@@ -4,6 +4,7 @@
  */
 
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { getTheme } from "../../theme.js";
 import { IconCheck, IconAlert, IconShield } from "../common/Icons.jsx";
@@ -11,6 +12,7 @@ import { IconCheck, IconAlert, IconShield } from "../common/Icons.jsx";
 export function SuccessPanel({ gradeLabel }) {
   const { isDark } = useTheme();
   const t = getTheme(isDark);
+  const navigate = useNavigate();
   return (
     <div style={{
       borderRadius: "24px", padding: "36px 24px", textAlign: "center",
@@ -38,6 +40,15 @@ export function SuccessPanel({ gradeLabel }) {
           No es posible falsificar o alterar este registro.
         </p>
       </div>
+      <button onClick={() => navigate("/mis-asistencias")} style={{
+        marginTop: "14px", width: "100%", padding: "11px", borderRadius: "14px",
+        fontSize: "13px", fontWeight: 600, cursor: "pointer",
+        color: isDark ? "#34d399" : "#059669",
+        background: isDark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.08)",
+        border: `1px solid ${isDark ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.3)"}`,
+      }}>
+        📋 Ver mis asistencias del mes
+      </button>
     </div>
   );
 }

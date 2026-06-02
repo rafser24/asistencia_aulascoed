@@ -6,6 +6,8 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { getAlumnos, crearAlumno, actualizarAlumno, eliminarAlumno, importarAlumnos, parsearCSV } from "../../services/studentsService.js";
 import { resetearDispositivo } from "../../services/attendanceService.js";
+import { useTheme } from "../../context/ThemeContext.jsx";
+import { getTheme, getSectionColor } from "../../theme.js";
 import { IconPlus, IconEdit, IconTrash, IconLoader, IconCheck, IconDownload, IconShield } from "../common/Icons.jsx";
 
 // ── Plantilla CSV ────────────────────────────────────────────────────────────
@@ -276,6 +278,8 @@ function AlumnoForm({ initial = {}, onSave, onCancel, grades }) {
 
 // ── Panel principal ───────────────────────────────────────────────────────────
 export default function StudentsPanel({ grades }) {
+  const { isDark } = useTheme();
+  const t = getTheme(isDark);
   const gradeList = grades?.length ? grades : GRADES_DEFAULT;
 
   const [filterSala, setFilterSala] = useState("all");
@@ -492,54 +496,52 @@ export default function StudentsPanel({ grades }) {
 
       {/* ── Tabla ── */}
       {!loading && alumnos.length > 0 && (
-        <div className="rounded-2xl overflow-x-auto" style={{ border: "1px solid rgba(139,92,246,0.15)" }}>
+        <div className="rounded-2xl overflow-x-auto" style={{ border: `1px solid ${t.cardBorder}`, background: t.card }}>
           <table className="w-full text-sm" style={{ borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ background: "rgba(109,40,217,0.14)", borderBottom: "1px solid rgba(139,92,246,0.2)" }}>
+              <tr style={{ background: isDark ? "rgba(109,40,217,0.14)" : t.bgSecondary, borderBottom: `1px solid ${t.cardBorder}` }}>
                 {["#","Código","ID Sección","NIE","Nombre","Sección","Faltó","Justificación","Observación",""].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-purple-400 uppercase tracking-wide whitespace-nowrap">
+                  <th key={h} style={{ padding: "12px 16px", textAlign: "left", fontSize: "11px", fontWeight: 700, color: t.textMuted, textTransform: "uppercase", letterSpacing: "0.05em", whiteSpace: "nowrap" }}>
                     {h}
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {alumnos.map((alumno, i) => (
+              {alumnos.map((alumno, i) => {
+                const sc = getSectionColor(alumno.sala, isDark);
+                return (
                 <React.Fragment key={alumno.id}>
                   {/* Fila normal */}
                   {editingId !== alumno.id && (
                     <tr
-                      style={{ borderBottom: "1px solid rgba(139,92,246,0.07)", background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent" }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(109,40,217,0.08)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent")}
+                      style={{ borderBottom: `1px solid ${t.cardBorder}`, background: i % 2 === 0 ? "transparent" : (isDark ? "rgba(109,40,217,0.03)" : "rgba(124,58,237,0.02)") }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = isDark ? "rgba(109,40,217,0.08)" : "rgba(124,58,237,0.05)")}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "transparent" : (isDark ? "rgba(109,40,217,0.03)" : "rgba(124,58,237,0.02)"))}
                     >
-                      <td className="px-4 py-3 text-purple-600 text-xs font-mono">{i + 1}</td>
-                      <td className="px-4 py-3 text-white font-mono text-xs">{alumno.codigo || "—"}</td>
-                      <td className="px-4 py-3 text-purple-200 font-mono text-xs">{alumno.idSeccion || "—"}</td>
-                      <td className="px-4 py-3 text-purple-200 font-mono text-xs">{alumno.nie || "—"}</td>
-                      <td className="px-4 py-3 text-white font-medium max-w-[160px] truncate">{alumno.nombre}</td>
-                      <td className="px-4 py-3">
-                        <span className="text-xs font-bold px-2 py-0.5 rounded-full"
-                          style={{ background: "rgba(109,40,217,0.25)", color: "#c4b5fd" }}>
+                      <td style={{ padding: "12px 16px", fontSize: "12px", fontFamily: "monospace", color: t.textFaint }}>{i + 1}</td>
+                      <td style={{ padding: "12px 16px", fontSize: "12px", fontFamily: "monospace", color: t.textMuted }}>{alumno.codigo || "—"}</td>
+                      <td style={{ padding: "12px 16px", fontSize: "12px", fontFamily: "monospace", color: t.textMuted }}>{alumno.idSeccion || "—"}</td>
+                      <td style={{ padding: "12px 16px", fontSize: "12px", fontFamily: "monospace", color: t.textMuted }}>{alumno.nie || "—"}</td>
+                      <td style={{ padding: "12px 16px", fontSize: "13px", fontWeight: 600, color: t.text, maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{alumno.nombre}</td>
+                      <td style={{ padding: "12px 16px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px", background: sc.pill, color: sc.pillText }}>
                           {alumno.sala}
                         </span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                          alumno.falto === "Sí"
-                            ? "text-red-300"
-                            : "text-emerald-400"
-                        }`}
-                          style={{
-                            background: alumno.falto === "Sí" ? "rgba(220,38,38,0.15)" : "rgba(16,185,129,0.12)",
-                          }}>
+                      <td style={{ padding: "12px 16px" }}>
+                        <span style={{
+                          fontSize: "11px", fontWeight: 700, padding: "3px 10px", borderRadius: "999px",
+                          background: alumno.falto === "Sí" ? (isDark ? "rgba(220,38,38,0.15)" : "#fee2e2") : (isDark ? "rgba(16,185,129,0.12)" : "#d1fae5"),
+                          color: alumno.falto === "Sí" ? (isDark ? "#f87171" : "#dc2626") : (isDark ? "#34d399" : "#059669"),
+                        }}>
                           {alumno.falto || "No"}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-purple-300 text-xs max-w-[140px] truncate">
+                      <td style={{ padding: "12px 16px", fontSize: "12px", color: t.textMuted, maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {alumno.falto === "Sí" ? (alumno.justificacion || "—") : "—"}
                       </td>
-                      <td className="px-4 py-3 text-purple-400 text-xs max-w-[160px] truncate">
+                      <td style={{ padding: "12px 16px", fontSize: "12px", color: t.textMuted, maxWidth: "160px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {alumno.observacion || "Sin observaciones"}
                       </td>
                       <td className="px-4 py-3">
@@ -580,7 +582,8 @@ export default function StudentsPanel({ grades }) {
                     </tr>
                   )}
                 </React.Fragment>
-              ))}
+              );
+              })}
             </tbody>
           </table>
         </div>

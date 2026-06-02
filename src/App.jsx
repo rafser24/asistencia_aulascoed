@@ -4,10 +4,12 @@ import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import ProtectedRoute from "./components/common/ProtectedRoute.jsx";
 import PageLoader from "./components/common/PageLoader.jsx";
+import OfflineBanner from "./components/common/OfflineBanner.jsx";
 
 // Lazy loading por ruta para optimizar bundle
 const Login = lazy(() => import("./pages/Login.jsx"));
 const MarcarAsistencia = lazy(() => import("./pages/MarcarAsistencia.jsx"));
+const MisAsistencias   = lazy(() => import("./pages/MisAsistencias.jsx"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard.jsx"));
 
 export default function App() {
@@ -15,6 +17,7 @@ export default function App() {
     <ThemeProvider>
     <AuthProvider>
       <BrowserRouter>
+        <OfflineBanner />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             {/* Pública */}
@@ -26,6 +29,16 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <MarcarAsistencia />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Alumno: historial personal */}
+            <Route
+              path="/mis-asistencias"
+              element={
+                <ProtectedRoute>
+                  <MisAsistencias />
                 </ProtectedRoute>
               }
             />

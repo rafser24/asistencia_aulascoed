@@ -8,7 +8,7 @@ import { useTheme } from "../../context/ThemeContext.jsx";
 import { getTheme } from "../../theme.js";
 import { IconMapPin, IconAlert, IconLoader } from "../common/Icons.jsx";
 
-export default function GeofenceStatus({ status, distance, errorMessage, onRetry, userCoords }) {
+export default function GeofenceStatus({ status, distance, accuracy, signalLabel, signalAviso, errorMessage, onRetry, userCoords }) {
   const { isDark } = useTheme();
   const t = getTheme(isDark);
 
@@ -34,21 +34,36 @@ export default function GeofenceStatus({ status, distance, errorMessage, onRetry
 
   if (status === "granted") {
     return (
-      <div style={{
-        borderRadius: "16px", padding: "14px 16px",
-        background: isDark ? "rgba(5,150,105,0.15)" : "#d1fae5",
-        border: `1px solid ${isDark ? "rgba(16,185,129,0.35)" : "rgba(16,185,129,0.4)"}`,
-        display: "flex", alignItems: "center", gap: "12px",
-      }}>
-        <IconMapPin style={{ color: isDark ? "#34d399" : "#059669", width: 18, height: 18, flexShrink: 0 }} />
-        <div>
-          <p style={{ fontSize: "13px", fontWeight: 700, color: isDark ? "#34d399" : "#065f46", margin: 0 }}>
-            ✓ Ubicación Verificada
-          </p>
-          <p style={{ fontSize: "11px", color: isDark ? "#6ee7b7" : "#047857", margin: "2px 0 0" }}>
-            Estás dentro del rango autorizado{distance !== null ? ` (${distance}m del centro)` : ""}.
-          </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <div style={{
+          borderRadius: "16px", padding: "14px 16px",
+          background: isDark ? "rgba(5,150,105,0.15)" : "#d1fae5",
+          border: `1px solid ${isDark ? "rgba(16,185,129,0.35)" : "rgba(16,185,129,0.4)"}`,
+          display: "flex", alignItems: "center", gap: "12px",
+        }}>
+          <IconMapPin style={{ color: isDark ? "#34d399" : "#059669", width: 18, height: 18, flexShrink: 0 }} />
+          <div>
+            <p style={{ fontSize: "13px", fontWeight: 700, color: isDark ? "#34d399" : "#065f46", margin: 0 }}>
+              ✓ Ubicación Verificada
+            </p>
+            <p style={{ fontSize: "11px", color: isDark ? "#6ee7b7" : "#047857", margin: "2px 0 0" }}>
+              {distance !== null ? `${distance}m del centro` : "Dentro del rango"}
+              {accuracy !== null ? ` · precisión ±${accuracy}m` : ""}
+              {signalLabel ? ` · ${signalLabel}` : ""}
+            </p>
+          </div>
         </div>
+        {/* Aviso de baja precisión (antena celular) */}
+        {signalAviso && (
+          <div style={{
+            borderRadius: "12px", padding: "10px 14px", fontSize: "11px", lineHeight: 1.6,
+            color: isDark ? "#fcd34d" : "#92400e",
+            background: isDark ? "rgba(234,179,8,0.1)" : "#fef9c3",
+            border: `1px solid ${isDark ? "rgba(234,179,8,0.3)" : "rgba(234,179,8,0.5)"}`,
+          }}>
+            ⚠️ {signalAviso}
+          </div>
+        )}
       </div>
     );
   }

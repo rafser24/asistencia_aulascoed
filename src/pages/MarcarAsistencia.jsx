@@ -11,6 +11,7 @@ import { auth, db } from "../services/firebase.js";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
 import { getTheme, getSectionColor, SECTION_COLORS } from "../theme.js";
+import { validarToken } from "../services/tokenService.js";
 import { useGeofencing } from "../hooks/useGeofencing.js";
 import { useAttendance } from "../hooks/useAttendance.js";
 import GeofenceStatus from "../components/student/GeofenceStatus.jsx";
@@ -228,12 +229,20 @@ export default function MarcarAsistencia() {
   const [searchParams] = useSearchParams();
   const [salaManual, setSalaManual] = useState(null);
   const sala = searchParams.get("sala") || salaManual;
+  const tokenUrl = searchParams.get("token");
+  const [tokenValido, setTokenValido] = useState(null); // null=cargando, true/false
 
   useEffect(() => {
     if (!loading && isAdmin) navigate("/admin/dashboard", { replace: true });
   }, [isAdmin, loading, navigate]);
 
-  const { status, distance, isWithinRange, errorMessage, requestLocation, userCoords } = useGeofencing();
+  // Validar token del QR (admins lo omiten)
+  useEffect(() => {
+    if (!sala || isAdmin) { setTokenValido(true); return; }
+    validarToken(sala, tokenUrl).then(setTokenValido);
+  }, [sala, tokenUrl, isAdmin]);
+
+  const { status, distance, accuracy, signalLabel, signalAviso, isWithinRange, errorMessage, requestLocation, userCoords } = useGeofencing();
   const efectivelyWithinRange = isAdmin ? true : isWithinRange;
   const gradeLabel = GRADE_LABELS[sala] || `Grado: ${sala}`;
   const sc = getSectionColor(sala, isDark);
@@ -253,6 +262,37 @@ export default function MarcarAsistencia() {
   }, []);
 
   if (!sala) return <GradeSelector onSelect={(id) => setSalaManual(id)} />;
+
+  // Token aún verificándose
+  if (tokenValido === null) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: isDark ? "#0a0814" : "#f5f0ff" }}>
+      <IconLoader style={{ width: 28, height: 28, color: t.textMuted }} />
+    </div>
+  );
+
+  // Token inválido o ausente
+  if (!tokenValido) return (
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "24px", background: isDark ? "#0a0814" : "#f5f0ff",
+      fontFamily: "'DM Sans', 'Segoe UI', sans-serif",
+    }}>
+      <div style={{
+        maxWidth: "320px", width: "100%", textAlign: "center",
+        borderRadius: "24px", padding: "40px 28px",
+        background: isDark ? "rgba(220,38,38,0.1)" : "#fee2e2",
+        border: `1.5px solid ${isDark ? "rgba(220,38,38,0.35)" : "rgba(220,38,38,0.4)"}`,
+      }}>
+        <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔒</div>
+        <h2 style={{ fontSize: "18px", fontWeight: 800, color: t.text, margin: "0 0 8px" }}>
+          QR inválido o expirado
+        </h2>
+        <p style={{ fontSize: "13px", color: t.textMuted, lineHeight: 1.6, margin: 0 }}>
+          Este enlace no tiene un código de acceso válido para hoy. Escanea el código QR del aula para registrar tu asistencia.
+        </p>
+      </div>
+    </div>
+  );
 
   const canSubmit = efectivelyWithinRange && submitStatus === "idle";
 
@@ -329,7 +369,7 @@ export default function MarcarAsistencia() {
             </div>
           </div>
         ) : (
-          <GeofenceStatus status={status} distance={distance} errorMessage={errorMessage} onRetry={requestLocation} userCoords={userCoords} />
+          <GeofenceStatus status={status} distance={distance} accuracy={accuracy} signalLabel={signalLabel} signalAviso={signalAviso} errorMessage={errorMessage} onRetry={requestLocation} userCoords={userCoords} />
         )}
 
         {/* Resultado o botón */}

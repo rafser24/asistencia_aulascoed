@@ -18,6 +18,9 @@ import FilterBar from "../../components/admin/FilterBar.jsx";
 import AttendanceTable from "../../components/admin/AttendanceTable.jsx";
 import StatPill from "../../components/admin/StatPill.jsx";
 import StudentsPanel from "../../components/admin/StudentsPanel.jsx";
+import VentanaHoraria from "../../components/admin/VentanaHoraria.jsx";
+import AdminSettings from "../../components/admin/AdminSettings.jsx";
+import MetricsDashboard from "../../components/admin/MetricsDashboard.jsx";
 import { getAsistenciasPorFecha } from "../../services/attendanceService.js";
 import { exportarAsistenciaOficial } from "../../services/csvService.js";
 import { IconPlus, IconDownload } from "../../components/common/Icons.jsx";
@@ -225,14 +228,18 @@ export default function AdminDashboard() {
         {/* ── Header de página ── */}
         <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold" style={{ color: t.text }}>
-            {activeTab === "grados" && "Módulos por Grado"}
-            {activeTab === "alumnos" && "Gestión de Alumnos"}
-            {activeTab === "historial" && "Historial de Asistencias"}
+            {activeTab === "metricas"      && "Métricas"}
+            {activeTab === "grados"        && "Módulos por Grado"}
+            {activeTab === "alumnos"       && "Gestión de Alumnos"}
+            {activeTab === "historial"     && "Historial de Asistencias"}
+            {activeTab === "configuracion" && "Configuración"}
           </h1>
           <p className="mt-1 text-sm" style={{ color: t.textMuted }}>
             {activeTab === "grados" && "Genera y comparte el QR único por sección. Cada QR bloquea el marcado a su grado específico."}
-            {activeTab === "alumnos" && "Registra, edita y organiza los alumnos por sección."}
-            {activeTab === "historial" && "Consulta, filtra y exporta registros. La hora de cada registro proviene del servidor institucional."}
+            {activeTab === "alumnos"       && "Registra, edita y organiza los alumnos por sección."}
+            {activeTab === "historial"     && "Consulta, filtra y exporta registros. La hora de cada registro proviene del servidor institucional."}
+            {activeTab === "metricas"      && "Estadísticas de asistencia en tiempo real, tendencias semanales y alertas."}
+            {activeTab === "configuracion" && "Gestiona administradores y revisa logs de seguridad del sistema."}
           </p>
         </div>
 
@@ -268,6 +275,20 @@ export default function AdminDashboard() {
           </>
         )}
 
+        {/* ════════════════════════ TAB: MÉTRICAS ════════════════════════ */}
+        {activeTab === "metricas" && (
+          <div className="animate-fade-in">
+            <MetricsDashboard />
+          </div>
+        )}
+
+        {/* ════════════════════════ TAB: CONFIGURACIÓN ═══════════════════ */}
+        {activeTab === "configuracion" && (
+          <div className="animate-fade-in">
+            <AdminSettings />
+          </div>
+        )}
+
         {/* ════════════════════════ TAB: ALUMNOS ══════════════════════════ */}
         {activeTab === "alumnos" && (
           <StudentsPanel grades={grades} />
@@ -276,6 +297,9 @@ export default function AdminDashboard() {
         {/* ════════════════════════ TAB: HISTORIAL ════════════════════════ */}
         {activeTab === "historial" && (
           <div className="animate-fade-in">
+            {/* Ventana horaria */}
+            <VentanaHoraria />
+
             {/* Barra de filtros */}
             <FilterBar
               selectedDate={selectedDate}

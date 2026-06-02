@@ -3,13 +3,14 @@
  * Tarjeta de grado con QR — soporte tema pastel claro/oscuro.
  */
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { QRCodeSVG, QRCodeCanvas } from "qrcode.react";
 import { useTheme } from "../../context/ThemeContext.jsx";
 import { getTheme, getSectionColor } from "../../theme.js";
+import { generarToken } from "../../services/tokenService.js";
 import { IconQR, IconCopy, IconClipboardCheck, IconDownload, IconEdit, IconTrash } from "../common/Icons.jsx";
 
-const APP_DOMAIN = import.meta.env.VITE_APP_DOMAIN || "https://asistencia-coed.netlify.app";
+const APP_DOMAIN = (import.meta.env.VITE_APP_DOMAIN || "https://asistencia-coed.netlify.app").replace(/\/$/, "");
 
 const COLORS = ["#6d28d9","#4f46e5","#7c3aed","#5b21b6","#4338ca","#6366f1","#0891b2","#059669","#dc2626"];
 
@@ -18,9 +19,29 @@ export default function GradeCard({ grade, onEdit, onDelete }) {
   const { isDark } = useTheme();
   const t = getTheme(isDark);
   const sc = getSectionColor(id, isDark);
-  const qrUrl = `${APP_DOMAIN}/marcar?sala=${id}`;
 
+  const [token, setToken] = useState("...");
   const [expanded, setExpanded] = useState(false);
+
+  // Generar token del día y actualizar automáticamente a medianoche
+  useEffect(() => {
+    let timeout;
+    const actualizar = async () => {
+      const t = await generarToken(id);
+      setToken(t);
+      // Calcular ms hasta la próxima medianoche
+      const ahora = new Date();
+      const manana = new Date(ahora);
+      manana.setDate(manana.getDate() + 1);
+      manana.setHours(0, 0, 0, 0);
+      const msHastaMedianoche = manana - ahora;
+      timeout = setTimeout(actualizar, msHastaMedianoche);
+    };
+    actualizar();
+    return () => clearTimeout(timeout);
+  }, [id]);
+
+  const qrUrl = `${APP_DOMAIN}/marcar?sala=${id}&token=${token}`;
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ id, label, section, color });
@@ -138,6 +159,21 @@ export default function GradeCard({ grade, onEdit, onDelete }) {
           border: `1px solid ${sc.border}`,
         }}>
           <QRCodeSVG value={qrUrl} size={expanded ? 180 : 120} fgColor="#1a0a3e" bgColor="#ffffff" level="H" />
+        </div>
+
+        {/* Token del día */}
+        <div style={{
+          borderRadius: "10px", padding: "8px 12px", marginBottom: "8px",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          background: sc.bg, border: `1px solid ${sc.border}`,
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "11px", color: sc.text, opacity: 0.7 }}>🔑 Token hoy:</span>
+            <span style={{ fontSize: "12px", fontWeight: 800, color: sc.accent, fontFamily: "monospace", letterSpacing: "1px" }}>
+              {token}
+            </span>
+          </div>
+          <span style={{ fontSize: "10px", color: sc.text, opacity: 0.5 }}>↻ medianoche</span>
         </div>
 
         {/* URL */}
