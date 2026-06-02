@@ -133,15 +133,16 @@ export async function hasMarcadoHoy(uid, sala) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
+  // Solo filtramos por uid + fecha (no requiere índice compuesto).
+  // El filtro de sala se aplica en cliente.
   const q = query(
     collection(db, COLLECTION),
     where("uid", "==", uid),
-    where("sala", "==", sala),
     where("fecha_cliente", ">=", Timestamp.fromDate(todayStart))
   );
 
   const snap = await getDocs(q);
-  return !snap.empty;
+  return snap.docs.some((d) => d.data().sala === sala);
 }
 
 /**
