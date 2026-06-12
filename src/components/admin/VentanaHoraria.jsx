@@ -9,25 +9,58 @@ import { getTheme } from "../../theme.js";
 import { getVentanaHoraria, setVentanaHoraria } from "../../services/attendanceService.js";
 import { IconLoader, IconCheck } from "../common/Icons.jsx";
 
+const LS_KEY = "coed_ventana_horaria";
+
+function loadFromLocalStorage() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch { return null; }
+}
+
+function saveToLocalStorage(data) {
+  try { localStorage.setItem(LS_KEY, JSON.stringify(data)); } catch { /* ignore */ }
+}
+
 export default function VentanaHoraria() {
   const { isDark } = useTheme();
   const t = getTheme(isDark);
 
-  const [form, setForm] = useState({ horaInicio: "07:00", horaFin: "08:00", activo: false });
+  const [form, setForm] = useState({ horaInicio: "07:15", horaFin: "09:00", activo: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   useEffect(() => {
+    // 1. Cargar inmediatamente desde localStorage (sin parpadeo)
+    const local = loadFromLocalStorage();
+    if (local) setForm(local);
+
+    // 2. Intentar Firestore; si devuelve datos, usarlos y actualizar localStorage
     getVentanaHoraria().then((data) => {
-      if (data) setForm(data);
+      if (data) {
+        setForm(data);
+        saveToLocalStorage(data);
+      }
+    }).catch(() => {
+      // Si falla Firestore, localStorage ya cargó los valores
     }).finally(() => setLoading(false));
   }, []);
 
   const handleSave = async () => {
     setSaving(true);
+    setSaveError(null);
     try {
       await setVentanaHoraria(form);
+      saveToLocalStorage(form);        // ← guardar también en localStorage
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      // Si Firestore falla, igual guardar en localStorage para persistir en el navegador
+      saveToLocalStorage(form);
+      setSaveError("No se pudo guardar en la nube, pero los cambios quedaron en este dispositivo.");
+      setTimeout(() => setSaveError(null), 4000);
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
     } finally {
@@ -121,6 +154,18 @@ export default function VentanaHoraria() {
             {saving ? <IconLoader style={{ width: 14, height: 14 }} /> : <IconCheck style={{ width: 14, height: 14 }} />}
             {saved ? "Guardado" : "Guardar"}
           </button>
+        </div>
+      )}
+
+      {/* Aviso si Firestore falló pero localStorage guardó */}
+      {saveError && (
+        <div style={{
+          marginTop: "10px", padding: "8px 12px", borderRadius: "10px", fontSize: "11px",
+          background: isDark ? "rgba(245,158,11,0.1)" : "#fef3c7",
+          border: `1px solid ${isDark ? "rgba(245,158,11,0.3)" : "rgba(245,158,11,0.5)"}`,
+          color: isDark ? "#fbbf24" : "#92400e",
+        }}>
+          ⚠️ {saveError}
         </div>
       )}
 
